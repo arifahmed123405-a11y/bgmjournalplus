@@ -1,0 +1,6 @@
+{
+  "name": "bgmarif Trading Journal",
+  "description": "A high-performance trading journal featuring multi-account tracking, dashboard stats, consistency scoring, an interactive calendar heatmap, trade session analysis, image upload and zoom viewer.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
