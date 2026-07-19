@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Account, Trade } from '../types';
 import EquityChart from './EquityChart';
-import { TrendingUp, Award, Calendar, DollarSign, Target, Sparkles, HelpCircle } from 'lucide-react';
+import { TrendingUp, Award, Calendar, DollarSign, Target, Sparkles, HelpCircle, Layers, Info } from 'lucide-react';
 
 interface DashboardProps {
   account: Account | null;
@@ -9,6 +9,9 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ account, trades }: DashboardProps) {
+  const [breakdownTab, setBreakdownTab] = useState<'pairs' | 'setups' | 'combos'>('pairs');
+  const [showConsistencyInfo, setShowConsistencyInfo] = useState(false);
+
   if (!account) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -107,7 +110,7 @@ export default function Dashboard({ account, trades }: DashboardProps) {
     }
   }
 
-  // 5. Top 5 Pairs Table
+  // 5. Top Performing Pairs Breakdown
   const pairDetailsMap: Record<string, { trades: number; wins: number; pnl: number }> = {};
   accountTrades.forEach((t) => {
     if (!pairDetailsMap[t.pair]) {
@@ -130,6 +133,80 @@ export default function Dashboard({ account, trades }: DashboardProps) {
     }))
     .sort((a, b) => b.pnl - a.pnl)
     .slice(0, 5);
+
+  // 6. Top Setup Strategies Breakdown
+  const setupDetailsMap: Record<string, { trades: number; wins: number; pnl: number }> = {};
+  accountTrades.forEach((t) => {
+    const sType = t.setup_type || 'Other';
+    if (!setupDetailsMap[sType]) {
+      setupDetailsMap[sType] = { trades: 0, wins: 0, pnl: 0 };
+    }
+    const stat = setupDetailsMap[sType];
+    stat.trades++;
+    if (Number(t.gain_loss) > 0) {
+      stat.wins++;
+    }
+    stat.pnl += Number(t.gain_loss);
+  });
+
+  const topSetups = Object.entries(setupDetailsMap)
+    .map(([setup, stats]) => ({
+      setup,
+      trades: stats.trades,
+      winRate: stats.trades > 0 ? Math.round((stats.wins / stats.trades) * 100) : 0,
+      pnl: stats.pnl,
+    }))
+    .sort((a, b) => b.pnl - a.pnl)
+    .slice(0, 5);
+
+  // Determine Best setup
+  let bestSetup = 'None';
+  let bestSetupGain = -Infinity;
+  topSetups.forEach((s) => {
+    if (s.pnl > bestSetupGain && s.pnl > 0) {
+      bestSetupGain = s.pnl;
+      bestSetup = s.setup;
+    }
+  });
+
+  // 7. Setup + Pair Combinations Breakdown (Best Trades)
+  const comboDetailsMap: Record<string, { trades: number; wins: number; pnl: number; pair: string; setup: string }> = {};
+  accountTrades.forEach((t) => {
+    const sType = t.setup_type || 'Other';
+    const pair = t.pair;
+    const key = `${sType} on ${pair}`;
+    if (!comboDetailsMap[key]) {
+      comboDetailsMap[key] = { trades: 0, wins: 0, pnl: 0, pair, setup: sType };
+    }
+    const stat = comboDetailsMap[key];
+    stat.trades++;
+    if (Number(t.gain_loss) > 0) {
+      stat.wins++;
+    }
+    stat.pnl += Number(t.gain_loss);
+  });
+
+  const topCombos = Object.entries(comboDetailsMap)
+    .map(([key, stats]) => ({
+      key,
+      pair: stats.pair,
+      setup: stats.setup,
+      trades: stats.trades,
+      winRate: stats.trades > 0 ? Math.round((stats.wins / stats.trades) * 100) : 0,
+      pnl: stats.pnl,
+    }))
+    .sort((a, b) => b.pnl - a.pnl)
+    .slice(0, 5);
+
+  // Determine Best combo
+  let bestCombo = 'None';
+  let bestComboGain = -Infinity;
+  topCombos.forEach((c) => {
+    if (c.pnl > bestComboGain && c.pnl > 0) {
+      bestComboGain = c.pnl;
+      bestCombo = c.key;
+    }
+  });
 
   return (
     <div className="space-y-6">
@@ -189,9 +266,12 @@ export default function Dashboard({ account, trades }: DashboardProps) {
         {/* Consistency Score */}
         <div className="bg-[#09090b] border border-emerald-500/20 rounded-xl p-4.5 flex flex-col justify-between relative group shadow-inner">
           <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-[11px] font-bold text-slate-500 font-mono uppercase tracking-widest flex items-center gap-1 cursor-help">
+            <span 
+              onClick={() => setShowConsistencyInfo(!showConsistencyInfo)}
+              className="text-[11px] font-bold text-slate-500 font-mono uppercase tracking-widest flex items-center gap-1 cursor-pointer select-none"
+            >
               Consistency
-              <HelpCircle size={12} className="text-slate-600" />
+              <HelpCircle size={12} className="text-slate-600 hover:text-emerald-400 transition-colors" />
             </span>
             <Award size={16} className="text-emerald-400" />
           </div>
@@ -207,10 +287,29 @@ export default function Dashboard({ account, trades }: DashboardProps) {
             </div>
           </div>
 
-          {/* Hover explaining tooltip */}
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-[#050507] border border-white/10 rounded-lg p-3 text-[10px] text-slate-400 font-mono hidden group-hover:block z-30 leading-normal shadow-2xl">
-            <p className="text-white font-semibold mb-1">Prop Firm Consistency Rule</p>
-            Measures your profit concentration. Scores higher when profits are distributed across many days instead of relying on a single lucky day. Scores 100% with no trades, 25% for a single trade day, and up to 100% as profit distribution flattens.
+          {/* Explaining tooltip (shows on hover or when clicked/held) */}
+          <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-[#050507] border border-zinc-800 rounded-lg p-3.5 text-[10px] text-slate-400 font-mono z-30 leading-normal shadow-2xl transition-all duration-200 ${showConsistencyInfo ? 'block' : 'hidden group-hover:block'}`}>
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-1.5 mb-1.5">
+              <p className="text-emerald-400 font-bold uppercase tracking-wider text-[9px]">Prop Firm Consistency Rule</p>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowConsistencyInfo(false);
+                }}
+                className="text-zinc-500 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="mb-2 text-slate-300">
+              Measures your daily profit concentration to ensure sustainable scaling.
+            </p>
+            <ul className="space-y-1 text-slate-400 list-disc list-inside">
+              <li><strong className="text-white">100% Score:</strong> No trades logged.</li>
+              <li><strong className="text-white">25% Score:</strong> Single day baseline.</li>
+              <li><strong className="text-white">Formula:</strong> 100 - (Max Profit of single day / Total Positive profit) * 100</li>
+              <li><strong className="text-emerald-400 font-bold">Closed Trades Only:</strong> Calculated strictly based on fully closed/committed records.</li>
+            </ul>
           </div>
         </div>
 
@@ -241,7 +340,7 @@ export default function Dashboard({ account, trades }: DashboardProps) {
         </div>
       </div>
 
-      {/* Equity Curve & Best Instrument */}
+      {/* Equity Curve & Combined Analytics Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Chart Column */}
         <div className="lg:col-span-2 space-y-2">
@@ -254,42 +353,136 @@ export default function Dashboard({ account, trades }: DashboardProps) {
           </div>
         </div>
 
-        {/* Top 5 Pairs / Stats Column */}
+        {/* Combined Pairs / Setup Breakdown */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-200">Top Performing Pairs</h3>
-            <span className="text-xs font-mono text-slate-500">Best: <span className="text-emerald-400 font-bold uppercase">{bestPair}</span></span>
+            <h3 className="text-sm font-semibold text-slate-200">Analytics Breakdown</h3>
+            <span className="text-xs font-mono text-slate-500 flex items-center gap-1.5 truncate max-w-[200px]" title={breakdownTab === 'pairs' ? bestPair : breakdownTab === 'setups' ? bestSetup : bestCombo}>
+              Best: <span className="text-emerald-400 font-bold uppercase truncate">{breakdownTab === 'pairs' ? bestPair : breakdownTab === 'setups' ? bestSetup : bestCombo}</span>
+            </span>
           </div>
 
-          <div className="bg-[#09090b] border border-white/5 rounded-2xl p-5 h-[340px] overflow-y-auto shadow-inner relative overflow-hidden">
-            {topPairs.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-center text-slate-500 font-mono text-xs">
-                No pairs traded yet.
-              </div>
-            ) : (
-              <div className="space-y-3 z-10 relative">
-                {topPairs.map((tp, i) => (
-                  <div
-                    key={tp.pair}
-                    className="flex items-center justify-between p-3 rounded-xl bg-[#050507]/60 border border-white/5 hover:border-white/10 transition-colors"
-                  >
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-mono text-slate-500">{i + 1}.</span>
-                        <span className="text-sm font-bold text-white uppercase tracking-tight">{tp.pair}</span>
-                      </div>
-                      <div className="text-[10px] font-mono text-slate-500 mt-0.5">
-                        {tp.trades} Trades • Win Rate: {tp.winRate}%
-                      </div>
-                    </div>
+          <div className="bg-[#09090b] border border-white/5 rounded-2xl p-5 h-[340px] flex flex-col shadow-inner relative overflow-hidden">
+            {/* Tab switchers */}
+            <div className="flex gap-1 p-1 bg-[#050507] border border-white/5 rounded-xl mb-4 z-10 relative">
+              <button
+                onClick={() => setBreakdownTab('pairs')}
+                className={`flex-1 py-1.5 text-[10px] sm:text-xs font-mono rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                  breakdownTab === 'pairs' ? 'bg-white/5 text-white font-bold' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Pairs
+              </button>
+              <button
+                onClick={() => setBreakdownTab('setups')}
+                className={`flex-1 py-1.5 text-[10px] sm:text-xs font-mono rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                  breakdownTab === 'setups' ? 'bg-white/5 text-white font-bold' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Setups
+              </button>
+              <button
+                onClick={() => setBreakdownTab('combos')}
+                className={`flex-1 py-1.5 text-[10px] sm:text-xs font-mono rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                  breakdownTab === 'combos' ? 'bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/10' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Setup + Pairs
+              </button>
+            </div>
 
-                    <div className={`text-sm font-semibold font-mono ${tp.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {tp.pnl >= 0 ? '+' : ''}${tp.pnl.toFixed(2)}
-                    </div>
+            <div className="flex-1 overflow-y-auto z-10 relative pr-1">
+              {breakdownTab === 'pairs' ? (
+                topPairs.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-center text-slate-500 font-mono text-xs">
+                    No pair trades logged.
                   </div>
-                ))}
-              </div>
-            )}
+                ) : (
+                  <div className="space-y-2.5">
+                    {topPairs.map((tp, i) => (
+                      <div
+                        key={tp.pair}
+                        className="flex items-center justify-between p-3 rounded-xl bg-[#050507]/60 border border-white/5 hover:border-white/10 transition-colors"
+                      >
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-mono text-slate-500">{i + 1}.</span>
+                            <span className="text-sm font-bold text-white uppercase tracking-tight">{tp.pair}</span>
+                          </div>
+                          <div className="text-[10px] font-mono text-slate-500 mt-0.5">
+                            {tp.trades} Trades • Win Rate: {tp.winRate}%
+                          </div>
+                        </div>
+
+                        <div className={`text-sm font-semibold font-mono ${tp.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {tp.pnl >= 0 ? '+' : ''}${tp.pnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : breakdownTab === 'setups' ? (
+                topSetups.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-center text-slate-500 font-mono text-xs">
+                    No setups logged.
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {topSetups.map((ts, i) => (
+                      <div
+                        key={ts.setup}
+                        className="flex items-center justify-between p-3 rounded-xl bg-[#050507]/60 border border-white/5 hover:border-white/10 transition-colors"
+                      >
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-mono text-slate-500">{i + 1}.</span>
+                            <span className="text-sm font-bold text-white tracking-tight">{ts.setup}</span>
+                          </div>
+                          <div className="text-[10px] font-mono text-slate-500 mt-0.5">
+                            {ts.trades} Trades • Win Rate: {ts.winRate}%
+                          </div>
+                        </div>
+
+                        <div className={`text-sm font-semibold font-mono ${ts.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {ts.pnl >= 0 ? '+' : ''}${ts.pnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : (
+                topCombos.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-center text-slate-500 font-mono text-xs">
+                    No combo trades logged.
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {topCombos.map((tc, i) => (
+                      <div
+                        key={tc.key}
+                        className="flex items-center justify-between p-3 rounded-xl bg-[#050507]/60 border border-[#10b981]/10 hover:border-[#10b981]/25 transition-colors"
+                      >
+                        <div className="max-w-[70%]">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-mono text-emerald-500/70">{i + 1}.</span>
+                            <span className="text-xs font-bold text-white truncate" title={tc.key}>
+                              {tc.setup} <span className="text-[10px] font-mono text-slate-400 font-normal">on</span> <span className="text-emerald-400 uppercase">{tc.pair}</span>
+                            </span>
+                          </div>
+                          <div className="text-[10px] font-mono text-slate-500 mt-0.5">
+                            {tc.trades} Trades • Win Rate: {tc.winRate}%
+                          </div>
+                        </div>
+
+                        <div className={`text-sm font-semibold font-mono ${tc.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {tc.pnl >= 0 ? '+' : ''}${tc.pnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
+            </div>
             <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none"></div>
           </div>
         </div>

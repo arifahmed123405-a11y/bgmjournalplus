@@ -173,6 +173,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'calendar' | 'trades' | 'analysis' | 'data'>('dashboard');
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [showAddAccountModal, setShowAddAccountModal] = useState(false);
+  const [showAccountDropdown, setShowAccountDropdown] = useState(false);
 
   // Detail/Preview overlays
   const [previewImageSrc, setPreviewImageSrc] = useState<string | null>(null);
@@ -470,8 +471,12 @@ export default function App() {
 
             {/* Switch Account Selector */}
             {accounts.length > 0 && (
-              <div className="relative group">
-                <div className="flex items-center gap-1.5 bg-[#09090b] border border-white/5 rounded-lg px-3 py-1.5 cursor-pointer hover:border-white/10 transition-all shadow-inner">
+              <div className="relative">
+                <div
+                  onClick={() => setShowAccountDropdown(!showAccountDropdown)}
+                  className="flex items-center gap-1.5 bg-[#09090b] border border-white/5 rounded-lg px-3 py-1.5 cursor-pointer hover:border-white/10 transition-all shadow-inner select-none"
+                  id="btn-trigger-account-dropdown"
+                >
                   <CreditCard size={14} className="text-zinc-400" />
                   <span className="text-xs font-semibold text-zinc-200 uppercase truncate max-w-[120px] sm:max-w-[180px]">
                     {activeAccount?.name || 'Select Account'}
@@ -480,42 +485,65 @@ export default function App() {
                 </div>
 
                 {/* Dropdown Items list */}
-                <div className="absolute top-full right-0 mt-1.5 w-60 bg-[#09090b] border border-white/5 rounded-lg shadow-2xl hidden group-hover:block z-50">
-                  <div className="p-2 border-b border-white/5 text-[10px] font-mono text-zinc-500 uppercase tracking-wider">
-                    My Trading Accounts ({accounts.length})
-                  </div>
-                  <div className="max-h-48 overflow-y-auto p-1.5 space-y-1">
-                    {accounts.map((acc) => (
-                      <button
-                        key={acc.id}
-                        onClick={() => handleSelectAccount(acc.id)}
-                        className={`w-full text-left rounded p-2 text-xs transition-colors flex items-center justify-between ${
-                          acc.id === selectedAccountId
-                            ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
-                            : 'hover:bg-white/5 text-zinc-300'
-                        }`}
-                      >
-                        <span className="truncate pr-2 font-medium">{acc.name}</span>
-                        <span className="font-mono text-[10px] text-zinc-500 uppercase">
-                          ({acc.instrument})
-                        </span>
-                      </button>
-                    ))}
-                  </div>
+                {showAccountDropdown && (
+                  <>
+                    {/* Backdrop to close on click outside */}
+                    <div className="fixed inset-0 z-40" onClick={() => setShowAccountDropdown(false)} />
+                    <div className="absolute top-full right-0 mt-1.5 w-60 bg-[#09090b] border border-white/5 rounded-lg shadow-2xl z-50">
+                      <div className="p-2 border-b border-white/5 text-[10px] font-mono text-zinc-500 uppercase tracking-wider">
+                        My Trading Accounts ({accounts.length})
+                      </div>
+                      <div className="max-h-48 overflow-y-auto p-1.5 space-y-1">
+                        {accounts.map((acc) => (
+                          <button
+                            key={acc.id}
+                            onClick={() => {
+                              handleSelectAccount(acc.id);
+                              setShowAccountDropdown(false);
+                            }}
+                            className={`w-full text-left rounded p-2 text-xs transition-colors flex items-center justify-between ${
+                              acc.id === selectedAccountId
+                                ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                                : 'hover:bg-white/5 text-zinc-300'
+                            }`}
+                          >
+                            <span className="truncate pr-2 font-medium">{acc.name}</span>
+                            <span className="font-mono text-[10px] text-zinc-500 uppercase">
+                              ({acc.instrument})
+                            </span>
+                          </button>
+                        ))}
+                      </div>
 
-                  <div className="p-1.5 border-t border-white/5 bg-[#050507]/40">
-                    <button
-                      onClick={() => setShowAddAccountModal(true)}
-                      className="w-full flex items-center justify-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 py-1.5 rounded transition-all font-medium"
-                      id="btn-trigger-add-account"
-                    >
-                      <Plus size={12} />
-                      Add Trading Account
-                    </button>
-                  </div>
-                </div>
+                      <div className="p-1.5 border-t border-white/5 bg-[#050507]/40">
+                        <button
+                          onClick={() => {
+                            setShowAddAccountModal(true);
+                            setShowAccountDropdown(false);
+                          }}
+                          className="w-full flex items-center justify-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 py-1.5 rounded transition-all font-medium"
+                          id="btn-trigger-add-account"
+                        >
+                          <Plus size={12} />
+                          Add Trading Account
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
+
+            {/* Quick Prominent Add Account Button */}
+            <button
+              onClick={() => setShowAddAccountModal(true)}
+              className="p-2 rounded-lg bg-[#09090b] border border-emerald-500/10 hover:border-emerald-500/30 text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1 font-mono text-[10px] font-bold"
+              title="Add New Trading Account"
+              id="btn-quick-add-account"
+            >
+              <Plus size={14} />
+              <span className="hidden sm:inline">Add Account</span>
+            </button>
 
             {/* Logout safe triggers */}
             <button

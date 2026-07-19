@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Account, Trade, TRADING_PAIRS, SETUP_TYPES, TRADING_SESSIONS } from '../types';
 import { supabase } from '../lib/supabase';
-import { Plus, Table, Trash2, Calendar, FileText, Image as ImageIcon, X, Eye, Loader2, Sparkles, AlertCircle, Edit3 } from 'lucide-react';
+import { Plus, Table, Trash2, Calendar, FileText, Image as ImageIcon, X, Eye, Loader2, Sparkles, AlertCircle, Edit3, Star } from 'lucide-react';
 
 interface TradesViewProps {
   account: Account | null;
@@ -35,6 +35,7 @@ export default function TradesView({
   const [beforeThought, setBeforeThought] = useState<string>('');
   const [afterThought, setAfterThought] = useState<string>('');
   const [images, setImages] = useState<string[]>([]); // holds Base64 strings
+  const [rating, setRating] = useState<number>(5); // 1-5 star rating
 
   // Search/Filter states
   const [search, setSearch] = useState('');
@@ -101,25 +102,56 @@ export default function TradesView({
     }
 
     setSubmitting(true);
+    const isDemoMode = localStorage.getItem('is_demo_mode') === 'true';
+
     try {
-      const { data, error } = await supabase.from('trades').insert({
-        user_id: account.user_id,
-        account_id: account.id,
-        trade_date: tradeDate,
-        pair: pair,
-        gain_loss: Number(gainLoss),
-        setup_type: setupType,
-        session: session,
-        rr_ratio: rrRatio,
-        entry_reason: entryReason,
-        before_thought: beforeThought,
-        after_thought: afterThought,
-        images: images,
-      });
+      if (isDemoMode) {
+        const newTrade: Trade = {
+          id: `demo-t-${Math.random().toString(36).substring(2)}`,
+          user_id: 'demo-user',
+          account_id: account.id,
+          trade_date: tradeDate,
+          pair: pair,
+          gain_loss: Number(gainLoss),
+          setup_type: setupType,
+          session: session,
+          rr_ratio: rrRatio,
+          entry_reason: entryReason,
+          before_thought: beforeThought,
+          after_thought: afterThought,
+          images: images,
+          rating: rating,
+          created_at: new Date().toISOString()
+        };
 
-      if (error) throw error;
+        const storedTrades = localStorage.getItem('demo_trades');
+        const localTrades = storedTrades ? JSON.parse(storedTrades) : [];
+        const updatedTrades = [newTrade, ...localTrades];
+        localStorage.setItem('demo_trades', JSON.stringify(updatedTrades));
 
-      onAddToast('Trade logged successfully to cloud ledger!', 'success');
+        onAddToast('Trade logged successfully to sandbox ledger!', 'success');
+      } else {
+        const { data, error } = await supabase.from('trades').insert({
+          user_id: account.user_id,
+          account_id: account.id,
+          trade_date: tradeDate,
+          pair: pair,
+          gain_loss: Number(gainLoss),
+          setup_type: setupType,
+          session: session,
+          rr_ratio: rrRatio,
+          entry_reason: entryReason,
+          before_thought: beforeThought,
+          after_thought: afterThought,
+          images: images,
+          rating: rating,
+        });
+
+        if (error) throw error;
+
+        onAddToast('Trade logged successfully to cloud ledger!', 'success');
+      }
+
       setShowAddForm(false);
       // Reset form states
       setGainLoss('');
@@ -127,6 +159,7 @@ export default function TradesView({
       setBeforeThought('');
       setAfterThought('');
       setImages([]);
+      setRating(5);
       setTradeDate(new Date().toISOString().slice(0, 10));
 
       await onRefreshData();
@@ -141,11 +174,20 @@ export default function TradesView({
   const handleDeleteTrade = async (id: string) => {
     if (!confirm('Are you sure you want to permanently delete this trade from your journal?')) return;
 
-    try {
-      const { error } = await supabase.from('trades').delete().eq('id', id);
-      if (error) throw error;
+    const isDemoMode = localStorage.getItem('is_demo_mode') === 'true';
 
-      onAddToast('Trade permanently deleted.', 'success');
+    try {
+      if (isDemoMode) {
+        const storedTrades = localStorage.getItem('demo_trades');
+        const localTrades = storedTrades ? JSON.parse(storedTrades) : [];
+        const updatedTrades = localTrades.filter((t: any) => t.id !== id);
+        localStorage.setItem('demo_trades', JSON.stringify(updatedTrades));
+        onAddToast('Trade permanently deleted from sandbox.', 'success');
+      } else {
+        const { error } = await supabase.from('trades').delete().eq('id', id);
+        if (error) throw error;
+        onAddToast('Trade permanently deleted.', 'success');
+      }
       await onRefreshData();
     } catch (err: any) {
       console.error(err);
@@ -241,7 +283,7 @@ export default function TradesView({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Session dropdown */}
             <div>
               <label className="block text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider mb-1.5">Trading Session</label>
@@ -281,6 +323,28 @@ export default function TradesView({
                 className="w-full bg-[#050507] border border-white/5 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-700 focus:outline-none focus:border-white/10 focus:ring-1 focus:ring-emerald-500/10 transition-all"
                 id="field-entry-reason"
               />
+            </div>
+
+            {/* Execution Rating */}
+            <div>
+              <label className="block text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider mb-1.5">Trade Execution Rating</label>
+              <div className="flex items-center gap-1.5 bg-[#050507] border border-white/5 rounded-xl px-3 py-2 h-[38px] justify-center">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRating(star)}
+                    className="p-0.5 hover:scale-110 transition-transform cursor-pointer"
+                    title={`${star} Star${star > 1 ? 's' : ''}`}
+                    id={`btn-form-star-${star}`}
+                  >
+                    <Star
+                      size={15}
+                      className={star <= rating ? 'fill-amber-400 stroke-amber-400' : 'stroke-slate-600 fill-none'}
+                    />
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -431,6 +495,7 @@ export default function TradesView({
                   <th className="p-4">Session</th>
                   <th className="p-4">R:R Ratio</th>
                   <th className="p-4">Images</th>
+                  <th className="p-4">Rating</th>
                   <th className="p-4 text-right">Gain / Loss ($)</th>
                   <th className="p-4 text-center">Actions</th>
                 </tr>
@@ -463,6 +528,20 @@ export default function TradesView({
                         ) : (
                           <span className="text-slate-600">-</span>
                         )}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-0.5">
+                          {[1, 2, 3, 4, 5].map((star) => {
+                            const starRating = trade.rating || 5;
+                            return (
+                              <Star
+                                key={star}
+                                size={12}
+                                className={star <= starRating ? 'fill-amber-400 stroke-amber-400' : 'stroke-zinc-800 fill-none'}
+                              />
+                            );
+                          })}
+                        </div>
                       </td>
                       <td className={`p-4 text-right font-bold font-mono ${isWin ? 'text-emerald-400' : 'text-rose-400'}`}>
                         {isWin ? '+' : ''}${Number(trade.gain_loss).toFixed(2)}

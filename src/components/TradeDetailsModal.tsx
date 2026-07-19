@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trade } from '../types';
-import { X, Calendar, DollarSign, Award, Target, MessageSquare, Image as ImageIcon } from 'lucide-react';
+import { X, Calendar, DollarSign, Award, Target, MessageSquare, Image as ImageIcon, Star } from 'lucide-react';
 
 interface TradeDetailsModalProps {
   trade: Trade;
@@ -37,10 +37,28 @@ export default function TradeDetailsModal({ trade, onClose, onPreviewImage }: Tr
           <div className={`p-5 rounded-xl border flex flex-col sm:flex-row items-center justify-between gap-4 ${
             isWin ? 'bg-emerald-950/20 border-emerald-900/40' : 'bg-rose-950/20 border-rose-900/40'
           }`}>
-            <div>
-              <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Position Outcome</span>
-              <div className={`text-2xl font-black font-mono leading-none mt-1 ${isWin ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {isWin ? '+' : ''}${Number(trade.gain_loss).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+              <div>
+                <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Position Outcome</span>
+                <div className={`text-2xl font-black font-mono leading-none mt-1 ${isWin ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {isWin ? '+' : ''}${Number(trade.gain_loss).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </div>
+              </div>
+
+              <div className="sm:border-l sm:border-zinc-800 sm:pl-6">
+                <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider block">Execution Rating</span>
+                <div className="flex items-center gap-0.5 mt-1">
+                  {[1, 2, 3, 4, 5].map((star) => {
+                    const starRating = trade.rating || 5;
+                    return (
+                      <Star
+                        key={star}
+                        size={14}
+                        className={star <= starRating ? 'fill-amber-400 stroke-amber-400' : 'stroke-zinc-600 fill-none'}
+                      />
+                    );
+                  })}
+                </div>
               </div>
             </div>
 

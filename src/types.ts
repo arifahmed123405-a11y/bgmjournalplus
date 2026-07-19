@@ -21,6 +21,7 @@ export interface Trade {
   before_thought?: string;
   after_thought?: string;
   images: string[]; // URLs or base64 data strings stored in the JSONB column
+  rating?: number; // 1-5 star rating
   created_at: string;
 }
 

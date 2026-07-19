@@ -190,7 +190,7 @@ export default function CalendarView({ account, trades, onOpenTradeDetails }: Ca
 
                   {dayTrades.length > 0 && (
                     <div className="text-[9px] font-mono font-bold tracking-tight text-right leading-none mt-1 truncate">
-                      {dayPnL >= 0 ? '+' : ''}${Math.round(dayPnL)}
+                      {dayPnL >= 0 ? '+' : ''}${dayPnL.toFixed(2)}
                     </div>
                   )}
 
