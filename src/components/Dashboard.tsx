@@ -383,11 +383,15 @@ export default function Dashboard({ account, trades }: DashboardProps) {
               </button>
               <button
                 onClick={() => setBreakdownTab('combos')}
-                className={`flex-1 py-1.5 text-[10px] sm:text-xs font-mono rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                  breakdownTab === 'combos' ? 'bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/10' : 'text-slate-400 hover:text-white'
+                className={`flex-1 py-1.5 text-[10px] sm:text-xs font-mono rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer relative ${
+                  breakdownTab === 'combos' ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.1)]' : 'bg-emerald-500/5 border border-emerald-500/15 text-slate-300 hover:text-white hover:bg-emerald-500/10'
                 }`}
               >
                 Setup + Pairs
+                <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
               </button>
             </div>
 

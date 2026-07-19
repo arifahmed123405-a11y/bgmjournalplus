@@ -16,6 +16,7 @@ export default function AnalysisView({ account, trades }: AnalysisViewProps) {
   // Sorted Tables State
   const [pairSortDesc, setPairSortDesc] = useState(true);
   const [setupSortDesc, setSetupSortDesc] = useState(true);
+  const [comboSortDesc, setComboSortDesc] = useState(true);
 
   if (!account) {
     return (
@@ -123,6 +124,32 @@ export default function AnalysisView({ account, trades }: AnalysisViewProps) {
       pnl: stats.pnl,
     }))
     .sort((a, b) => (setupSortDesc ? b.pnl - a.pnl : a.pnl - b.pnl));
+
+  // Setup + Pair Combinations calculations
+  const comboStatsMap: Record<string, { total: number; wins: number; pnl: number; pair: string; setup: string }> = {};
+  filteredTrades.forEach((t) => {
+    const sType = t.setup_type || 'Other';
+    const pair = t.pair;
+    const key = `${sType} on ${pair}`;
+    if (!comboStatsMap[key]) {
+      comboStatsMap[key] = { total: 0, wins: 0, pnl: 0, pair, setup: sType };
+    }
+    const stat = comboStatsMap[key];
+    stat.total++;
+    if (Number(t.gain_loss) > 0) stat.wins++;
+    stat.pnl += Number(t.gain_loss);
+  });
+
+  const comboPerformances = Object.entries(comboStatsMap)
+    .map(([key, stats]) => ({
+      key,
+      pair: stats.pair,
+      setup: stats.setup,
+      total: stats.total,
+      winRate: stats.total > 0 ? Math.round((stats.wins / stats.total) * 100) : 0,
+      pnl: stats.pnl,
+    }))
+    .sort((a, b) => (comboSortDesc ? b.pnl - a.pnl : a.pnl - b.pnl));
 
   const weekDays = [
     { label: 'Monday', val: 1 },
@@ -387,6 +414,65 @@ export default function AnalysisView({ account, trades }: AnalysisViewProps) {
               </table>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* 4. SETUP + PAIR COMBINATIONS EFFECTIVENESS (BEST TRADES) */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h3 className="text-xs font-mono font-semibold uppercase tracking-wider text-zinc-500">
+              Setup + Pair Effectiveness (Best Trades)
+            </h3>
+            <span className="text-[9px] bg-emerald-500/10 text-emerald-400 font-mono px-1.5 py-0.5 rounded border border-emerald-500/10 font-bold">
+              Highly Actionable
+            </span>
+          </div>
+          <button
+            onClick={() => setComboSortDesc(!comboSortDesc)}
+            className="flex items-center gap-1 text-[10px] font-mono text-zinc-500 hover:text-zinc-300"
+            id="btn-sort-combo-pnl"
+          >
+            <ArrowUpDown size={12} />
+            Sort: {comboSortDesc ? 'Best first' : 'Worst first'}
+          </button>
+        </div>
+
+        <div className="bg-zinc-900/40 border border-zinc-850 rounded-xl overflow-hidden">
+          {comboPerformances.length === 0 ? (
+            <div className="py-12 text-center text-xs font-mono text-zinc-500">
+              No trade combinations recorded.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left text-xs min-w-[500px]">
+                <thead>
+                  <tr className="border-b border-zinc-850 bg-zinc-950/20 text-[10px] font-mono text-zinc-400 uppercase tracking-wider">
+                    <th className="p-3">Rank</th>
+                    <th className="p-3">Setup Strategy</th>
+                    <th className="p-3">Trading Pair</th>
+                    <th className="p-3">Trades Logged</th>
+                    <th className="p-3">Win %</th>
+                    <th className="p-3 text-right">Total Net Profit/Loss</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-850">
+                  {comboPerformances.map((c, i) => (
+                    <tr key={c.key} className="hover:bg-zinc-900/20">
+                      <td className="p-3 text-zinc-500 font-mono text-xs">{i + 1}</td>
+                      <td className="p-3 text-white font-semibold">{c.setup}</td>
+                      <td className="p-3 text-emerald-400 font-mono font-bold uppercase">{c.pair}</td>
+                      <td className="p-3 text-zinc-400 font-mono">{c.total}</td>
+                      <td className="p-3 text-zinc-400 font-mono">{c.winRate}%</td>
+                      <td className={`p-3 text-right font-bold font-mono ${c.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {c.pnl >= 0 ? '+' : ''}${c.pnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -29,7 +29,8 @@ import {
   AlertCircle,
   CheckCircle2,
   Info,
-  Loader2
+  Loader2,
+  Edit3
 } from 'lucide-react';
 
 // Seeding standard Demo Accounts if local state is blank
@@ -173,6 +174,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'calendar' | 'trades' | 'analysis' | 'data'>('dashboard');
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [showAddAccountModal, setShowAddAccountModal] = useState(false);
+  const [showEditAccountModal, setShowEditAccountModal] = useState(false);
+  const [editAccName, setEditAccName] = useState('');
   const [showAccountDropdown, setShowAccountDropdown] = useState(false);
 
   // Detail/Preview overlays
@@ -390,6 +393,44 @@ export default function App() {
     }
   };
 
+  const handleRenameAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const activeAcc = accounts.find((a) => a.id === selectedAccountId);
+    if (!editAccName.trim() || !activeAcc) {
+      addToast('Please input a valid account name.', 'error');
+      return;
+    }
+
+    const nameToSave = editAccName.trim();
+    try {
+      if (isDemo) {
+        const updatedAccs = accounts.map((acc) =>
+          acc.id === activeAcc.id ? { ...acc, name: nameToSave } : acc
+        );
+        setAccounts(updatedAccs);
+        localStorage.setItem('demo_accounts', JSON.stringify(updatedAccs));
+        addToast('Renamed sandbox account locally!', 'success');
+        setShowEditAccountModal(false);
+      } else {
+        const { error } = await supabase
+          .from('accounts')
+          .update({ name: nameToSave })
+          .eq('id', activeAcc.id);
+
+        if (error) throw error;
+
+        setAccounts((prev) =>
+          prev.map((acc) => (acc.id === activeAcc.id ? { ...acc, name: nameToSave } : acc))
+        );
+        addToast('Renamed cloud trading account!', 'success');
+        setShowEditAccountModal(false);
+      }
+    } catch (err: any) {
+      console.error(err);
+      addToast(err.message || 'Failed to rename account.', 'error');
+    }
+  };
+
   const handleLogout = async () => {
     if (isDemo) {
       setIsDemo(false);
@@ -471,65 +512,82 @@ export default function App() {
 
             {/* Switch Account Selector */}
             {accounts.length > 0 && (
-              <div className="relative">
-                <div
-                  onClick={() => setShowAccountDropdown(!showAccountDropdown)}
-                  className="flex items-center gap-1.5 bg-[#09090b] border border-white/5 rounded-lg px-3 py-1.5 cursor-pointer hover:border-white/10 transition-all shadow-inner select-none"
-                  id="btn-trigger-account-dropdown"
-                >
-                  <CreditCard size={14} className="text-zinc-400" />
-                  <span className="text-xs font-semibold text-zinc-200 uppercase truncate max-w-[120px] sm:max-w-[180px]">
-                    {activeAccount?.name || 'Select Account'}
-                  </span>
-                  <ChevronDown size={14} className="text-zinc-500" />
-                </div>
+              <div className="flex items-center gap-1.5">
+                <div className="relative">
+                  <div
+                    onClick={() => setShowAccountDropdown(!showAccountDropdown)}
+                    className="flex items-center gap-1.5 bg-[#09090b] border border-white/5 rounded-lg px-3 py-1.5 cursor-pointer hover:border-white/10 transition-all shadow-inner select-none"
+                    id="btn-trigger-account-dropdown"
+                  >
+                    <CreditCard size={14} className="text-zinc-400" />
+                    <span className="text-xs font-semibold text-zinc-200 uppercase truncate max-w-[120px] sm:max-w-[180px]">
+                      {activeAccount?.name || 'Select Account'}
+                    </span>
+                    <ChevronDown size={14} className="text-zinc-500" />
+                  </div>
 
-                {/* Dropdown Items list */}
-                {showAccountDropdown && (
-                  <>
-                    {/* Backdrop to close on click outside */}
-                    <div className="fixed inset-0 z-40" onClick={() => setShowAccountDropdown(false)} />
-                    <div className="absolute top-full right-0 mt-1.5 w-60 bg-[#09090b] border border-white/5 rounded-lg shadow-2xl z-50">
-                      <div className="p-2 border-b border-white/5 text-[10px] font-mono text-zinc-500 uppercase tracking-wider">
-                        My Trading Accounts ({accounts.length})
-                      </div>
-                      <div className="max-h-48 overflow-y-auto p-1.5 space-y-1">
-                        {accounts.map((acc) => (
+                  {/* Dropdown Items list */}
+                  {showAccountDropdown && (
+                    <>
+                      {/* Backdrop to close on click outside */}
+                      <div className="fixed inset-0 z-40" onClick={() => setShowAccountDropdown(false)} />
+                      <div className="absolute top-full right-0 mt-1.5 w-60 bg-[#09090b] border border-white/5 rounded-lg shadow-2xl z-50">
+                        <div className="p-2 border-b border-white/5 text-[10px] font-mono text-zinc-500 uppercase tracking-wider">
+                          My Trading Accounts ({accounts.length})
+                        </div>
+                        <div className="max-h-48 overflow-y-auto p-1.5 space-y-1">
+                          {accounts.map((acc) => (
+                            <button
+                              key={acc.id}
+                              onClick={() => {
+                                handleSelectAccount(acc.id);
+                                setShowAccountDropdown(false);
+                              }}
+                              className={`w-full text-left rounded p-2 text-xs transition-colors flex items-center justify-between ${
+                                acc.id === selectedAccountId
+                                  ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                                  : 'hover:bg-white/5 text-zinc-300'
+                              }`}
+                            >
+                              <span className="truncate pr-2 font-medium">{acc.name}</span>
+                              <span className="font-mono text-[10px] text-zinc-500 uppercase">
+                                ({acc.instrument})
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="p-1.5 border-t border-white/5 bg-[#050507]/40">
                           <button
-                            key={acc.id}
                             onClick={() => {
-                              handleSelectAccount(acc.id);
+                              setShowAddAccountModal(true);
                               setShowAccountDropdown(false);
                             }}
-                            className={`w-full text-left rounded p-2 text-xs transition-colors flex items-center justify-between ${
-                              acc.id === selectedAccountId
-                                ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
-                                : 'hover:bg-white/5 text-zinc-300'
-                            }`}
+                            className="w-full flex items-center justify-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 py-1.5 rounded transition-all font-medium"
+                            id="btn-trigger-add-account"
                           >
-                            <span className="truncate pr-2 font-medium">{acc.name}</span>
-                            <span className="font-mono text-[10px] text-zinc-500 uppercase">
-                              ({acc.instrument})
-                            </span>
+                            <Plus size={12} />
+                            Add Trading Account
                           </button>
-                        ))}
+                        </div>
                       </div>
+                    </>
+                  )}
+                </div>
 
-                      <div className="p-1.5 border-t border-white/5 bg-[#050507]/40">
-                        <button
-                          onClick={() => {
-                            setShowAddAccountModal(true);
-                            setShowAccountDropdown(false);
-                          }}
-                          className="w-full flex items-center justify-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 py-1.5 rounded transition-all font-medium"
-                          id="btn-trigger-add-account"
-                        >
-                          <Plus size={12} />
-                          Add Trading Account
-                        </button>
-                      </div>
-                    </div>
-                  </>
+                {/* Edit Account Name Small Button */}
+                {activeAccount && (
+                  <button
+                    onClick={() => {
+                      setEditAccName(activeAccount.name);
+                      setShowEditAccountModal(true);
+                    }}
+                    className="p-1.5 rounded-lg bg-[#09090b] border border-white/5 hover:border-emerald-500/30 text-zinc-400 hover:text-emerald-400 transition-colors cursor-pointer"
+                    title="Edit account name"
+                    id="btn-edit-account-name"
+                  >
+                    <Edit3 size={12} />
+                  </button>
                 )}
               </div>
             )}
@@ -722,6 +780,57 @@ export default function App() {
                       Create Account
                     </>
                   )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Account Modal */}
+      {showEditAccountModal && activeAccount && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 px-4">
+          <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-2xl relative">
+            <div className="flex items-center justify-between border-b border-zinc-800 p-4">
+              <span className="text-sm font-bold text-white uppercase font-mono">Edit Account Name</span>
+              <button
+                onClick={() => setShowEditAccountModal(false)}
+                className="text-zinc-500 hover:text-white p-1 rounded hover:bg-zinc-800 transition-colors"
+                id="btn-edit-account-modal-close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleRenameAccount} className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-mono text-zinc-400 uppercase tracking-wider mb-1.5">New Account Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. My $100K FTMO"
+                  value={editAccName}
+                  onChange={(e) => setEditAccName(e.target.value)}
+                  className="w-full bg-zinc-950/85 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-emerald-500/50 font-sans"
+                  id="field-edit-account-name"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditAccountModal(false)}
+                  className="px-4 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs font-mono text-zinc-400 hover:text-white"
+                  id="btn-cancel-edit-account"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-bold transition-all cursor-pointer"
+                  id="btn-submit-edit-account"
+                >
+                  Save Changes
                 </button>
               </div>
             </form>

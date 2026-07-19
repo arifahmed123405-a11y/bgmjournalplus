@@ -21,8 +21,10 @@ export default function TradesView({
   onOpenTradeDetails,
 }: TradesViewProps) {
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isDemoMode = localStorage.getItem('is_demo_mode') === 'true';
 
   // Form states
   const [tradeDate, setTradeDate] = useState<string>(new Date().toISOString().slice(0, 10));
@@ -106,53 +108,98 @@ export default function TradesView({
 
     try {
       if (isDemoMode) {
-        const newTrade: Trade = {
-          id: `demo-t-${Math.random().toString(36).substring(2)}`,
-          user_id: 'demo-user',
-          account_id: account.id,
-          trade_date: tradeDate,
-          pair: pair,
-          gain_loss: Number(gainLoss),
-          setup_type: setupType,
-          session: session,
-          rr_ratio: rrRatio,
-          entry_reason: entryReason,
-          before_thought: beforeThought,
-          after_thought: afterThought,
-          images: images,
-          rating: rating,
-          created_at: new Date().toISOString()
-        };
-
         const storedTrades = localStorage.getItem('demo_trades');
         const localTrades = storedTrades ? JSON.parse(storedTrades) : [];
-        const updatedTrades = [newTrade, ...localTrades];
-        localStorage.setItem('demo_trades', JSON.stringify(updatedTrades));
 
-        onAddToast('Trade logged successfully to sandbox ledger!', 'success');
+        if (editingTrade) {
+          const updatedTrades = localTrades.map((t: any) =>
+            t.id === editingTrade.id
+              ? {
+                  ...t,
+                  trade_date: tradeDate,
+                  pair: pair,
+                  gain_loss: Number(gainLoss),
+                  setup_type: setupType,
+                  session: session,
+                  rr_ratio: rrRatio,
+                  entry_reason: entryReason,
+                  before_thought: beforeThought,
+                  after_thought: afterThought,
+                  images: images,
+                  rating: rating,
+                }
+              : t
+          );
+          localStorage.setItem('demo_trades', JSON.stringify(updatedTrades));
+          onAddToast('Trade updated successfully in sandbox ledger!', 'success');
+        } else {
+          const newTrade: Trade = {
+            id: `demo-t-${Math.random().toString(36).substring(2)}`,
+            user_id: 'demo-user',
+            account_id: account.id,
+            trade_date: tradeDate,
+            pair: pair,
+            gain_loss: Number(gainLoss),
+            setup_type: setupType,
+            session: session,
+            rr_ratio: rrRatio,
+            entry_reason: entryReason,
+            before_thought: beforeThought,
+            after_thought: afterThought,
+            images: images,
+            rating: rating,
+            created_at: new Date().toISOString()
+          };
+
+          const updatedTrades = [newTrade, ...localTrades];
+          localStorage.setItem('demo_trades', JSON.stringify(updatedTrades));
+          onAddToast('Trade logged successfully to sandbox ledger!', 'success');
+        }
       } else {
-        const { data, error } = await supabase.from('trades').insert({
-          user_id: account.user_id,
-          account_id: account.id,
-          trade_date: tradeDate,
-          pair: pair,
-          gain_loss: Number(gainLoss),
-          setup_type: setupType,
-          session: session,
-          rr_ratio: rrRatio,
-          entry_reason: entryReason,
-          before_thought: beforeThought,
-          after_thought: afterThought,
-          images: images,
-          rating: rating,
-        });
+        if (editingTrade) {
+          const { error } = await supabase
+            .from('trades')
+            .update({
+              trade_date: tradeDate,
+              pair: pair,
+              gain_loss: Number(gainLoss),
+              setup_type: setupType,
+              session: session,
+              rr_ratio: rrRatio,
+              entry_reason: entryReason,
+              before_thought: beforeThought,
+              after_thought: afterThought,
+              images: images,
+              rating: rating,
+            })
+            .eq('id', editingTrade.id);
 
-        if (error) throw error;
+          if (error) throw error;
+          onAddToast('Trade updated successfully in cloud ledger!', 'success');
+        } else {
+          const { error } = await supabase.from('trades').insert({
+            user_id: account.user_id,
+            account_id: account.id,
+            trade_date: tradeDate,
+            pair: pair,
+            gain_loss: Number(gainLoss),
+            setup_type: setupType,
+            session: session,
+            rr_ratio: rrRatio,
+            entry_reason: entryReason,
+            before_thought: beforeThought,
+            after_thought: afterThought,
+            images: images,
+            rating: rating,
+          });
 
-        onAddToast('Trade logged successfully to cloud ledger!', 'success');
+          if (error) throw error;
+          onAddToast('Trade logged successfully to cloud ledger!', 'success');
+        }
       }
 
       setShowAddForm(false);
+      setEditingTrade(null);
       // Reset form states
       setGainLoss('');
       setEntryReason('');
@@ -207,12 +254,27 @@ export default function TradesView({
         </div>
 
         <button
-          onClick={() => setShowAddForm(!showAddForm)}
+          onClick={() => {
+            if (showAddForm) {
+              setShowAddForm(false);
+              setEditingTrade(null);
+              setGainLoss('');
+              setEntryReason('');
+              setBeforeThought('');
+              setAfterThought('');
+              setImages([]);
+              setRating(5);
+              setTradeDate(new Date().toISOString().slice(0, 10));
+            } else {
+              setEditingTrade(null);
+              setShowAddForm(true);
+            }
+          }}
           className="flex items-center gap-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold px-4 py-2.5 text-xs transition-all shadow-lg shadow-emerald-500/10 active:scale-[0.98] cursor-pointer"
           id="btn-toggle-add-trade-form"
         >
           {showAddForm ? <X size={14} /> : <Plus size={14} />}
-          {showAddForm ? 'Cancel Form' : 'Log New Trade'}
+          {showAddForm ? (editingTrade ? 'Cancel Edit' : 'Cancel Form') : 'Log New Trade'}
         </button>
       </div>
 
@@ -220,6 +282,17 @@ export default function TradesView({
       {showAddForm && (
         <form onSubmit={handleSubmit} className="bg-[#09090b] border border-white/5 rounded-2xl p-6 space-y-6 relative overflow-hidden shadow-inner">
           <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-emerald-500 to-emerald-300" />
+
+          {/* Form title */}
+          <div className="flex items-center justify-between pb-2 border-b border-white/5">
+            <span className="text-sm font-bold text-white uppercase font-mono tracking-wider flex items-center gap-1.5">
+              <Edit3 size={14} className="text-emerald-400" />
+              {editingTrade ? 'Edit Trade Entry' : 'Log New Trade Entry'}
+            </span>
+            <span className="text-[10px] font-mono text-zinc-500">
+              {editingTrade ? `Editing Trade Record` : 'Create a new journal entry'}
+            </span>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Date Selection */}
@@ -433,7 +506,17 @@ export default function TradesView({
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
-              onClick={() => setShowAddForm(false)}
+              onClick={() => {
+                setShowAddForm(false);
+                setEditingTrade(null);
+                setGainLoss('');
+                setEntryReason('');
+                setBeforeThought('');
+                setAfterThought('');
+                setImages([]);
+                setRating(5);
+                setTradeDate(new Date().toISOString().slice(0, 10));
+              }}
               className="px-4 py-2.5 rounded-xl bg-[#050507] border border-white/5 text-xs font-mono text-slate-400 hover:text-white hover:border-white/10 transition-all cursor-pointer"
               id="btn-cancel-trade-submit"
             >
@@ -448,12 +531,12 @@ export default function TradesView({
               {submitting ? (
                 <>
                   <Loader2 className="animate-spin" size={14} />
-                  Saving trade...
+                  {editingTrade ? 'Updating trade...' : 'Saving trade...'}
                 </>
               ) : (
                 <>
-                  <Plus size={14} />
-                  Commit to Cloud
+                  {editingTrade ? <Edit3 size={14} /> : <Plus size={14} />}
+                  {editingTrade ? 'Update Entry' : (isDemoMode ? 'Save sandbox entry' : 'Commit to Cloud')}
                 </>
               )}
             </button>
@@ -547,21 +630,47 @@ export default function TradesView({
                         {isWin ? '+' : ''}${Number(trade.gain_loss).toFixed(2)}
                       </td>
                       <td className="p-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-1.5">
                           <button
                             onClick={() => onOpenTradeDetails(trade)}
-                            className="rounded-lg bg-[#050507] border border-white/5 hover:border-white/10 text-slate-300 hover:text-white px-3 py-1.5 text-[10px] font-mono transition-all cursor-pointer shadow-inner"
+                            className="rounded-lg bg-[#050507] border border-white/5 hover:border-white/10 text-slate-300 hover:text-white px-2 py-1 text-[10px] font-mono transition-all cursor-pointer shadow-inner flex items-center gap-1"
                             id={`btn-view-trade-details-${trade.id}`}
+                            title="View trade details"
                           >
-                            View
+                            <Eye size={11} className="text-zinc-400" />
+                            <span className="hidden sm:inline">View</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingTrade(trade);
+                              setTradeDate(trade.trade_date);
+                              setPair(trade.pair);
+                              setGainLoss(String(trade.gain_loss));
+                              setSetupType(trade.setup_type);
+                              setSession(trade.session);
+                              setRrRatio(trade.rr_ratio || '');
+                              setEntryReason(trade.entry_reason || '');
+                              setBeforeThought(trade.before_thought || '');
+                              setAfterThought(trade.after_thought || '');
+                              setImages(trade.images || []);
+                              setRating(trade.rating || 5);
+                              setShowAddForm(true);
+                            }}
+                            className="rounded-lg bg-[#050507] border border-white/5 hover:border-emerald-500/20 text-slate-300 hover:text-emerald-400 px-2 py-1 text-[10px] font-mono transition-all cursor-pointer shadow-inner flex items-center gap-1"
+                            id={`btn-edit-trade-${trade.id}`}
+                            title="Edit trade entry"
+                          >
+                            <Edit3 size={11} className="text-emerald-500" />
+                            <span className="hidden sm:inline">Edit</span>
                           </button>
                           <button
                             onClick={() => handleDeleteTrade(trade.id)}
-                            className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/20 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                            className="rounded-lg bg-[#050507] border border-white/5 hover:border-rose-500/20 text-slate-400 hover:text-rose-400 px-2 py-1 text-[10px] font-mono transition-all cursor-pointer shadow-inner flex items-center gap-1"
                             id={`btn-delete-trade-${trade.id}`}
                             title="Delete permanently"
                           >
-                            <Trash2 size={13} />
+                            <Trash2 size={11} className="text-rose-500" />
+                            <span className="hidden sm:inline">Delete</span>
                           </button>
                         </div>
                       </td>

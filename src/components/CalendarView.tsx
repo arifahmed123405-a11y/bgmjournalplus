@@ -145,7 +145,7 @@ export default function CalendarView({ account, trades, onOpenTradeDetails }: Ca
             <div>Sat</div>
           </div>
 
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2">
             {daysList.map((cell, idx) => {
               if (cell.dayNumber === null || cell.dateString === null) {
                 return (
@@ -184,21 +184,22 @@ export default function CalendarView({ account, trades, onOpenTradeDetails }: Ca
                       setSelectedDayTrades({ date: cell.dateString!, trades: dayTrades });
                     }
                   }}
-                  className={`aspect-square rounded-lg border p-2 flex flex-col justify-between transition-all select-none cursor-pointer ${dayBg}`}
+                  className={`aspect-square rounded-lg border p-1 sm:p-2 flex flex-col justify-between transition-all select-none cursor-pointer ${dayBg}`}
                 >
-                  <div className="text-[10px] font-mono font-bold leading-none">{cell.dayNumber}</div>
-
-                  {dayTrades.length > 0 && (
-                    <div className="text-[9px] font-mono font-bold tracking-tight text-right leading-none mt-1 truncate">
-                      {dayPnL >= 0 ? '+' : ''}${dayPnL.toFixed(2)}
-                    </div>
-                  )}
-
-                  {dayTrades.length > 0 && (
-                    <div className="flex items-center gap-0.5 justify-end mt-0.5">
-                      <span className={`text-[8px] font-mono font-bold ${badgeColor}`}>
+                  {/* Top row: day number + trade count */}
+                  <div className="flex items-center justify-between gap-0.5 w-full">
+                    <span className="text-[10px] sm:text-xs font-mono font-bold leading-none">{cell.dayNumber}</span>
+                    {dayTrades.length > 0 && (
+                      <span className={`text-[8px] sm:text-[9px] font-mono font-black px-0.5 sm:px-1 py-0.5 rounded bg-white/5 leading-none ${badgeColor}`}>
                         {dayTrades.length}T
                       </span>
+                    )}
+                  </div>
+
+                  {/* Bottom row: Daily profit/loss */}
+                  {dayTrades.length > 0 && (
+                    <div className="text-[8px] xs:text-[9.5px] sm:text-[11px] font-black font-mono tracking-tighter text-right leading-none mt-auto pt-1 truncate w-full" title={dayPnL >= 0 ? `+$${dayPnL.toFixed(2)}` : `-$${Math.abs(dayPnL).toFixed(2)}`}>
+                      {dayPnL >= 0 ? '+' : ''}${dayPnL.toFixed(2)}
                     </div>
                   )}
                 </div>
