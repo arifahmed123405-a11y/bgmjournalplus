@@ -13,6 +13,7 @@ export interface Trade {
   account_id: string;
   trade_date: string;
   pair: string;
+  direction?: 'BUY' | 'SELL';
   gain_loss: number;
   setup_type: string;
   session: string;

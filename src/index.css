@@ -6,6 +6,32 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+/* Global Reset for viewport zoom prevention and theme background */
+html, body {
+  background-color: #050507;
+  color: #e2e8f0;
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+  background-color: #050507;
+}
+
+/* Prevent iOS auto-zoom when focusing inputs */
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* Base resets & custom smooth scrollbars */
 ::-webkit-scrollbar {
   width: 6px;

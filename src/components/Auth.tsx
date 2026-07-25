@@ -4,10 +4,9 @@ import { Eye, EyeOff, Loader2, KeyRound, Mail, Sparkles } from 'lucide-react';
 
 interface AuthProps {
   onAuthSuccess: (session: any) => void;
-  onEnterDemoMode: () => void;
 }
 
-export default function Auth({ onAuthSuccess, onEnterDemoMode }: AuthProps) {
+export default function Auth({ onAuthSuccess }: AuthProps) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -69,7 +68,7 @@ export default function Auth({ onAuthSuccess, onEnterDemoMode }: AuthProps) {
             TRADING JOURNAL v1.0
           </div>
           <h1 className="text-3xl font-sans font-bold tracking-tight text-white mb-2">
-            bgmarif Journal
+            bgmarif Trading Journal
           </h1>
           <p className="text-sm text-zinc-400">
             Professional Multi-Account Trading Intelligence Suite
@@ -167,24 +166,6 @@ export default function Auth({ onAuthSuccess, onEnterDemoMode }: AuthProps) {
             >
               {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
             </button>
-
-            <div className="flex items-center my-2">
-              <div className="h-[1px] flex-1 bg-zinc-850" />
-              <span className="px-3 text-[10px] font-mono text-zinc-500 uppercase tracking-wider">OR</span>
-              <div className="h-[1px] flex-1 bg-zinc-850" />
-            </div>
-
-            <button
-              type="button"
-              onClick={onEnterDemoMode}
-              className="w-full flex items-center justify-center gap-2 bg-zinc-800/80 hover:bg-zinc-800 text-zinc-200 hover:text-white font-mono text-xs py-2 rounded-lg border border-zinc-700/50 transition-all"
-              id="auth-demo-mode-btn"
-            >
-              🚀 Enter Demo Sandbox Mode
-            </button>
-            <p className="text-[10px] text-zinc-500 font-mono">
-              Demo Mode runs fully local to let you explore the full feature set instantly without signing in.
-            </p>
           </div>
         </div>
       </div>

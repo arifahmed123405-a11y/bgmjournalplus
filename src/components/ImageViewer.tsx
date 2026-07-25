@@ -35,7 +35,10 @@ export default function ImageViewer({ src, onClose }: ImageViewerProps) {
     setZoom(newZoom);
   };
 
-  // Dragging to pan
+  // Dragging to pan (Mouse & Touch)
+  const [touchDistanceStart, setTouchDistanceStart] = useState<number | null>(null);
+  const [initialZoomOnPinch, setInitialZoomOnPinch] = useState<number>(100);
+
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -54,6 +57,47 @@ export default function ImageViewer({ src, onClose }: ImageViewerProps) {
     setIsDragging(false);
   };
 
+  // Touch Handlers for Mobile Panning & Pinch Zooming
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      setIsDragging(true);
+      setDragStart({
+        x: e.touches[0].clientX - position.x,
+        y: e.touches[0].clientY - position.y,
+      });
+    } else if (e.touches.length === 2) {
+      setIsDragging(false);
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      setTouchDistanceStart(dist);
+      setInitialZoomOnPinch(zoom);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 1 && isDragging) {
+      setPosition({
+        x: e.touches[0].clientX - dragStart.x,
+        y: e.touches[0].clientY - dragStart.y,
+      });
+    } else if (e.touches.length === 2 && touchDistanceStart !== null) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const factor = dist / touchDistanceStart;
+      const newZoom = Math.min(300, Math.max(50, Math.round(initialZoomOnPinch * factor)));
+      setZoom(newZoom);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    setTouchDistanceStart(null);
+  };
+
   const handleZoomIn = () => {
     setZoom(prev => Math.min(300, prev + 25));
   };
@@ -70,10 +114,11 @@ export default function ImageViewer({ src, onClose }: ImageViewerProps) {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-black/95 select-none"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-black/95 select-none touch-none"
       onWheel={handleWheel}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
+      onTouchEnd={handleTouchEnd}
     >
       {/* Top bar */}
       <div className="flex w-full items-center justify-between bg-zinc-900/80 px-6 py-4 backdrop-blur-md">
@@ -128,6 +173,8 @@ export default function ImageViewer({ src, onClose }: ImageViewerProps) {
         className="relative flex-1 w-full overflow-hidden flex items-center justify-center cursor-grab active:cursor-grabbing"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
       >
         <div
           style={{

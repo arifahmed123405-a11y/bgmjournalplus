@@ -33,127 +33,6 @@ import {
   Edit3
 } from 'lucide-react';
 
-// Seeding standard Demo Accounts if local state is blank
-const SEED_DEMO_ACCOUNTS: Account[] = [
-  {
-    id: 'demo-acc-1',
-    user_id: 'demo-user',
-    name: 'EURUSD Prop Challenge',
-    instrument: 'EURUSD',
-    starting_balance: 10000,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 'demo-acc-2',
-    user_id: 'demo-user',
-    name: 'Gold Personal Portfolio',
-    instrument: 'Gold',
-    starting_balance: 50000,
-    created_at: new Date().toISOString(),
-  }
-];
-
-// Seeding realistic historical trades for Demo Mode to make it instantly alive!
-const SEED_DEMO_TRADES: Trade[] = [
-  {
-    id: 'demo-t-1',
-    user_id: 'demo-user',
-    account_id: 'demo-acc-1',
-    trade_date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10), // 4 days ago
-    pair: 'EURUSD',
-    gain_loss: 450.00,
-    setup_type: 'Breakout',
-    session: 'London',
-    rr_ratio: '1:3',
-    entry_reason: 'HTF support rejection followed by 15m bullish fair value gap fill and Market Structure Shift.',
-    before_thought: 'Strong daily bias is bullish. Looking for London session low sweeps.',
-    after_thought: 'Trade played out perfectly. Executed flawless scale-out at psychological resistance.',
-    images: [],
-    created_at: new Date().toISOString()
-  },
-  {
-    id: 'demo-t-2',
-    user_id: 'demo-user',
-    account_id: 'demo-acc-1',
-    trade_date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10), // 3 days ago
-    pair: 'EURUSD',
-    gain_loss: -150.00,
-    setup_type: 'Trend',
-    session: 'New York',
-    rr_ratio: '1:2',
-    entry_reason: 'Trend continuation retest of 50 EMA on 5m chart.',
-    before_thought: 'A bit high in the range, but following momentum.',
-    after_thought: 'Got stopped out by minor CPI pre-news volatility. Need to avoid entering 1h before macro data releases.',
-    images: [],
-    created_at: new Date().toISOString()
-  },
-  {
-    id: 'demo-t-3',
-    user_id: 'demo-user',
-    account_id: 'demo-acc-1',
-    trade_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10), // 2 days ago
-    pair: 'EURUSD',
-    gain_loss: 300.00,
-    setup_type: 'Support/Resistance',
-    session: 'London',
-    rr_ratio: '1:2',
-    entry_reason: 'Retest of key daily support level with bullish divergence on RSI.',
-    before_thought: 'Clear range-bound market on higher timeframes. Buying the bottom.',
-    after_thought: 'Clean target hit. Spacing out entries worked incredibly well.',
-    images: [],
-    created_at: new Date().toISOString()
-  },
-  {
-    id: 'demo-t-4',
-    user_id: 'demo-user',
-    account_id: 'demo-acc-1',
-    trade_date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10), // 1 day ago
-    pair: 'EURUSD',
-    gain_loss: 620.00,
-    setup_type: 'Scalp',
-    session: 'London',
-    rr_ratio: '1:4',
-    entry_reason: 'Orderblock mitigation and institutional liquidity sweep.',
-    before_thought: 'High concentration, disciplined risk. Only looking for high-probability setups.',
-    after_thought: 'Massive win. Walked away immediately to avoid overtrading.',
-    images: [],
-    created_at: new Date().toISOString()
-  },
-  // Gold Demo Trades
-  {
-    id: 'demo-t-5',
-    user_id: 'demo-user',
-    account_id: 'demo-acc-2',
-    trade_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-    pair: 'Gold',
-    gain_loss: 1850.25,
-    setup_type: 'News',
-    session: 'Multiple Sessions',
-    rr_ratio: '1:3',
-    entry_reason: 'Geopolitical risk escalation sparked safe-haven demand breaking 4h highs.',
-    before_thought: 'Extremely volatile market. Sticking to 1% risk maximum.',
-    after_thought: 'Explosive breakout. Trailed stop loss perfectly to secure max returns.',
-    images: [],
-    created_at: new Date().toISOString()
-  },
-  {
-    id: 'demo-t-6',
-    user_id: 'demo-user',
-    account_id: 'demo-acc-2',
-    trade_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-    pair: 'Gold',
-    gain_loss: -900.00,
-    setup_type: 'Breakout',
-    session: 'New York',
-    rr_ratio: '1:2',
-    entry_reason: 'Failed breakout buy above key psych resistance.',
-    before_thought: 'FOMO crept in. Entered right at the top of the range.',
-    after_thought: 'Classic bull trap. Good lesson in patience. Accepted the loss and closed chart.',
-    images: [],
-    created_at: new Date().toISOString()
-  }
-];
-
 interface Toast {
   id: string;
   msg: string;
@@ -162,7 +41,6 @@ interface Toast {
 
 export default function App() {
   const [session, setSession] = useState<any>(null);
-  const [isDemo, setIsDemo] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Core App states
@@ -202,61 +80,20 @@ export default function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setSession(session);
-      } else {
-        // Fallback or check if previously set demo session
-        const storedDemo = localStorage.getItem('is_demo_mode');
-        if (storedDemo === 'true') {
-          setIsDemo(true);
-        }
       }
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session) {
-        setIsDemo(false);
-        localStorage.removeItem('is_demo_mode');
-      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // 2. Fetch or load seed data when session or isDemo changes
+  // 2. Fetch or load seed data when session changes
   const refreshData = async () => {
-    if (isDemo) {
-      // Local Storage Mode
-      const storedAccs = localStorage.getItem('demo_accounts');
-      const storedTrades = localStorage.getItem('demo_trades');
-
-      let currentAccs = SEED_DEMO_ACCOUNTS;
-      let currentTrades = SEED_DEMO_TRADES;
-
-      if (storedAccs) {
-        currentAccs = JSON.parse(storedAccs);
-      } else {
-        localStorage.setItem('demo_accounts', JSON.stringify(SEED_DEMO_ACCOUNTS));
-      }
-
-      if (storedTrades) {
-        currentTrades = JSON.parse(storedTrades);
-      } else {
-        localStorage.setItem('demo_trades', JSON.stringify(SEED_DEMO_TRADES));
-      }
-
-      setAccounts(currentAccs);
-      setTrades(currentTrades);
-
-      if (currentAccs.length > 0) {
-        const activeId = localStorage.getItem('active_account_id');
-        if (activeId && currentAccs.some(a => a.id === activeId)) {
-          setSelectedAccountId(activeId);
-        } else {
-          setSelectedAccountId(currentAccs[0].id);
-        }
-      }
-    } else if (session?.user) {
+    if (session?.user) {
       // Supabase Mode
       try {
         const { data: accs, error: accError } = await supabase
@@ -319,7 +156,7 @@ export default function App() {
     if (!loading) {
       refreshData();
     }
-  }, [session, isDemo, loading]);
+  }, [session, loading]);
 
   // Handle account switcher
   const handleSelectAccount = (id: string) => {
@@ -340,46 +177,25 @@ export default function App() {
     const balanceNum = Number(newAccBalance);
 
     try {
-      if (isDemo) {
-        const newAcc: Account = {
-          id: `demo-acc-${Math.random().toString(36).substring(2)}`,
-          user_id: 'demo-user',
+      const { data, error } = await supabase
+        .from('accounts')
+        .insert({
+          user_id: session.user.id,
           name: newAccName,
           instrument: newAccInstrument,
           starting_balance: balanceNum,
-          created_at: new Date().toISOString(),
-        };
+        })
+        .select()
+        .single();
 
-        const updatedAccs = [...accounts, newAcc];
-        setAccounts(updatedAccs);
-        localStorage.setItem('demo_accounts', JSON.stringify(updatedAccs));
+      if (error) throw error;
 
-        setSelectedAccountId(newAcc.id);
-        localStorage.setItem('active_account_id', newAcc.id);
-
-        addToast('Created sandbox account locally!', 'success');
+      if (data) {
+        setAccounts((prev) => [...prev, data]);
+        setSelectedAccountId(data.id);
+        localStorage.setItem('active_account_id', data.id);
+        addToast('Created cloud trading account!', 'success');
         setShowAddAccountModal(false);
-      } else {
-        const { data, error } = await supabase
-          .from('accounts')
-          .insert({
-            user_id: session.user.id,
-            name: newAccName,
-            instrument: newAccInstrument,
-            starting_balance: balanceNum,
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        if (data) {
-          setAccounts((prev) => [...prev, data]);
-          setSelectedAccountId(data.id);
-          localStorage.setItem('active_account_id', data.id);
-          addToast('Created cloud trading account!', 'success');
-          setShowAddAccountModal(false);
-        }
       }
 
       // Reset fields
@@ -403,28 +219,18 @@ export default function App() {
 
     const nameToSave = editAccName.trim();
     try {
-      if (isDemo) {
-        const updatedAccs = accounts.map((acc) =>
-          acc.id === activeAcc.id ? { ...acc, name: nameToSave } : acc
-        );
-        setAccounts(updatedAccs);
-        localStorage.setItem('demo_accounts', JSON.stringify(updatedAccs));
-        addToast('Renamed sandbox account locally!', 'success');
-        setShowEditAccountModal(false);
-      } else {
-        const { error } = await supabase
-          .from('accounts')
-          .update({ name: nameToSave })
-          .eq('id', activeAcc.id);
+      const { error } = await supabase
+        .from('accounts')
+        .update({ name: nameToSave })
+        .eq('id', activeAcc.id);
 
-        if (error) throw error;
+      if (error) throw error;
 
-        setAccounts((prev) =>
-          prev.map((acc) => (acc.id === activeAcc.id ? { ...acc, name: nameToSave } : acc))
-        );
-        addToast('Renamed cloud trading account!', 'success');
-        setShowEditAccountModal(false);
-      }
+      setAccounts((prev) =>
+        prev.map((acc) => (acc.id === activeAcc.id ? { ...acc, name: nameToSave } : acc))
+      );
+      addToast('Renamed cloud trading account!', 'success');
+      setShowEditAccountModal(false);
     } catch (err: any) {
       console.error(err);
       addToast(err.message || 'Failed to rename account.', 'error');
@@ -432,25 +238,13 @@ export default function App() {
   };
 
   const handleLogout = async () => {
-    if (isDemo) {
-      setIsDemo(false);
-      localStorage.removeItem('is_demo_mode');
-      addToast('Logged out of Sandbox Sandbox mode.', 'info');
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      addToast(error.message, 'error');
     } else {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        addToast(error.message, 'error');
-      } else {
-        setSession(null);
-        addToast('Signed out of cloud cluster safely.', 'success');
-      }
+      setSession(null);
+      addToast('Signed out of cloud cluster safely.', 'success');
     }
-  };
-
-  const enterDemoMode = () => {
-    setIsDemo(true);
-    localStorage.setItem('is_demo_mode', 'true');
-    addToast('Welcome to Demo Sandbox mode!', 'success');
   };
 
   if (loading) {
@@ -462,15 +256,14 @@ export default function App() {
     );
   }
 
-  // If not authenticated and not in demo mode, show Auth
-  if (!session && !isDemo) {
+  // If not authenticated, show Auth
+  if (!session) {
     return (
       <Auth
         onAuthSuccess={(sess) => {
           setSession(sess);
           addToast('Successfully authenticated with Supabase!', 'success');
         }}
-        onEnterDemoMode={enterDemoMode}
       />
     );
   }
@@ -479,7 +272,7 @@ export default function App() {
   const activeAccount = accounts.find((a) => a.id === selectedAccountId) || null;
 
   return (
-    <div className="min-h-screen bg-[#050507] text-slate-200 flex flex-col font-sans select-none pb-12">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#050507] text-slate-200 flex flex-col font-sans select-none pb-12">
       {/* 1. TOP HEADER NAVIGATION RAIL */}
       <header className="border-b border-white/5 bg-[#050507]/80 backdrop-blur-md sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
@@ -490,16 +283,8 @@ export default function App() {
             </div>
             <div>
               <div className="font-bold tracking-tight text-white text-sm flex items-center gap-1.5 leading-none">
-                BGMARIF <span className="text-emerald-500">PRO</span>
-                {isDemo && (
-                  <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 font-mono text-[9px] px-1 rounded uppercase tracking-wider ml-1">
-                    Demo
-                  </span>
-                )}
+                bgmarif <span className="text-emerald-500 font-normal">Trading Journal</span>
               </div>
-              <span className="text-[9px] font-mono text-slate-500 block mt-1 tracking-widest uppercase">
-                Trading Journal
-              </span>
             </div>
           </div>
 
@@ -659,6 +444,7 @@ export default function App() {
             account={activeAccount}
             trades={trades}
             onOpenTradeDetails={(t) => setViewingTrade(t)}
+            onAddToast={addToast}
           />
         )}
 
@@ -679,7 +465,7 @@ export default function App() {
 
         {activeTab === 'data' && (
           <DataManagement
-            userId={isDemo ? 'demo-user' : session?.user?.id}
+            userId={session?.user?.id}
             accounts={accounts}
             trades={trades}
             onRefreshData={refreshData}

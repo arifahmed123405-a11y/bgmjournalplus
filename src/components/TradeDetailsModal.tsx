@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trade } from '../types';
-import { X, Calendar, DollarSign, Award, Target, MessageSquare, Image as ImageIcon, Star } from 'lucide-react';
+import { X, Calendar, DollarSign, Award, Target, MessageSquare, Image as ImageIcon, Star, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface TradeDetailsModalProps {
   trade: Trade;
@@ -11,6 +11,7 @@ interface TradeDetailsModalProps {
 export default function TradeDetailsModal({ trade, onClose, onPreviewImage }: TradeDetailsModalProps) {
   const isWin = Number(trade.gain_loss) > 0;
   const imageCount = Array.isArray(trade.images) ? trade.images.length : 0;
+  const direction = trade.direction || 'BUY';
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/85 px-4 select-none">
@@ -20,7 +21,20 @@ export default function TradeDetailsModal({ trade, onClose, onPreviewImage }: Tr
           <div className="flex items-center gap-2">
             <span className="text-sm font-mono text-zinc-500">{trade.trade_date}</span>
             <span className="text-zinc-600">•</span>
-            <span className="text-sm font-bold text-white uppercase tracking-wider">{trade.pair} Entry details</span>
+            <span className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+              {direction === 'BUY' ? (
+                <span className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] px-1.5 py-0.5 rounded font-mono flex items-center gap-1">
+                  <TrendingUp size={12} />
+                  BUY
+                </span>
+              ) : (
+                <span className="bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[10px] px-1.5 py-0.5 rounded font-mono flex items-center gap-1">
+                  <TrendingDown size={12} />
+                  SELL
+                </span>
+              )}
+              {trade.pair} Entry details
+            </span>
           </div>
           <button
             onClick={onClose}
